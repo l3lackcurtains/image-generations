@@ -1,0 +1,16 @@
+services:
+  csm-api:
+    build: .
+    ports:
+      - "8383:8383"
+    volumes:
+      - ./results:/app/results
+      - ./local_models:/app/local_models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
