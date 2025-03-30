@@ -33,7 +33,7 @@ def generate_image_endpoint():
         
         # Generate image
         generation_start = time.time()
-        image = generate_image(model, prompt, height, width)
+        image = generate_image(prompt, height, width, model)
         generation_time = time.time() - generation_start
         
         # Convert image to bytes for response

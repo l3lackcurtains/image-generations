@@ -1,10 +1,10 @@
 services:
-  csm-api:
+  image-generator:
+    container_name: image-generator
     build: .
     ports:
-      - "8383:8383"
+      - "8484:8484"
     volumes:
-      - ./results:/app/results
       - ./local_models:/app/local_models
     deploy:
       resources:
