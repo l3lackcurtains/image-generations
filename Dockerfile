@@ -12,11 +12,7 @@ COPY . .
 # Install Python dependencies in fewer layers
 RUN pip install --upgrade pip && \
     pip install -U diffusers[torch] torch torchvision torchaudio transformers \
-    flask protobuf sentencepiece --upgrade accelerate huggingface_hub
-
-# # Set HuggingFace token as build argument
-# ARG HF_TOKEN
-# RUN huggingface-cli login --token $HF_TOKEN --add-to-git-credential
+    flask protobuf sentencepiece --upgrade accelerate
 
 EXPOSE 8484
 
