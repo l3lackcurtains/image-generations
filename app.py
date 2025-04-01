@@ -65,6 +65,36 @@ def health():
             "timestamp": time.time()
         }), 500
 
+@app.route('/system-info', methods=['GET'])
+def system_info():
+    """Endpoint to check system configuration including GPU status"""
+    try:
+        gpu_info = {}
+        
+        # Try to get PyTorch GPU info
+        try:
+            import torch
+            gpu_info["cuda_available"] = torch.cuda.is_available()
+            if torch.cuda.is_available():
+                gpu_info["cuda_device_count"] = torch.cuda.device_count()
+                gpu_info["cuda_device_name"] = torch.cuda.get_device_name(0)
+                gpu_info["cuda_version"] = torch.version.cuda
+        except ImportError:
+            gpu_info["torch_import_error"] = "PyTorch not installed"
+        
+        return jsonify({
+            "status": "ok",
+            "gpu_info": gpu_info,
+            "timestamp": time.time()
+        })
+    except Exception as e:
+        print(f"System info check failed: {e}")
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "timestamp": time.time()
+        }), 500
+
 @app.route('/', methods=['GET'])
 def index():
     """Simple landing page with API documentation"""
