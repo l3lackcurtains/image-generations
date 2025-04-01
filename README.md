@@ -1,3 +1,10 @@
+### Download the models
+
+```bash
+huggingface-cli download black-forest-labs/FLUX.1-schnell --local-dir ./local_models/black-forest-labs/FLUX.1-schnell
+huggingface-cli download black-forest-labs/FLUX.1-dev --local-dir ./local_models/black-forest-labs/FLUX.1-dev
+```
+
 #### Build the docker image and push to gcr
 
 ```bash

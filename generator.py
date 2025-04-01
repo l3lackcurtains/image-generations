@@ -20,17 +20,18 @@ if device == "cuda":
 # Set dtypes based on device
 dtype = torch.bfloat16 if device == "cuda" else torch.float32
 
+local_model_directory = "./local_models"
+
 # Load models
 pipe_schnell = FluxPipeline.from_pretrained(
-    "black-forest-labs/FLUX.1-schnell", 
+    pretrained_model_name_or_path=f"{local_model_directory}/black-forest-labs/FLUX.1-schnell", 
     torch_dtype=dtype,
-    cache_dir="./local_models"
+    
 )
 
 pipe_dev = FluxPipeline.from_pretrained(
-    "black-forest-labs/FLUX.1-dev", 
+    pretrained_model_name_or_path=f"{local_model_directory}/black-forest-labs/FLUX.1-dev", 
     torch_dtype=dtype,
-    cache_dir="./local_models"
 )
 
 # Configure device placement
