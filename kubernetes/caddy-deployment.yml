@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-generation-caddy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: image-generation
+  template:
+    metadata:
+      labels:
+        app: image-generation
+    spec:
+      containers:
+        - name: caddy
+          image: caddy:latest
+          ports:
+            - containerPort: 8484
+          volumeMounts:
+            - name: image-generation-caddy-config
+              mountPath: /etc/caddy/Caddyfile
+              subPath: Caddyfile
+      volumes:
+        - name: image-generation-caddy-config
+          configMap:
+            name: image-generation-caddy-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: image-generation-caddy-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: image-generation
+  ports:
+    - name: image-generation-http
+      protocol: TCP
+      port: 8484
+      targetPort: 8484

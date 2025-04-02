@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: image-generation-caddy-config
+data:
+  Caddyfile: |
+    :8484 {
+        reverse_proxy image-generation-service:8484
+    }

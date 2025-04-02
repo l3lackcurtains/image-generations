@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-generation-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: image-generation
+  template:
+    metadata:
+      labels:
+        app: image-generation
+    spec:
+      containers:
+        - name: image-generation
+          image: gcr.io/citric-lead-450721-v2/silk-image-generation:1.0.0
+          ports:
+            - containerPort: 8383
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+              cpu: "15"
+              memory: "58Gi"
+            requests:
+              nvidia.com/gpu: 1
+              cpu: "8"
+              memory: "48Gi"
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: image-generation-service
+spec:
+  selector:
+    app: image-generation
+  ports:
+    - port: 8484
+      targetPort: 8484
+  type: ClusterIP
