@@ -70,8 +70,6 @@ class ImageGenerator:
         random_seed = torch.randint(0, 2**32 - 1, (1,)).item()
         generator = torch.Generator(device="cuda" if self.device == "cuda" else None).manual_seed(random_seed)
         
-        print(f"Using seed: {random_seed}")
-        
         try:
             if model == "flux-schnell":
                 image = self.pipe_schnell(

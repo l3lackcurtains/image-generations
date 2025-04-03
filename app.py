@@ -2,14 +2,22 @@ from flask import Flask, request, jsonify, send_file
 from io import BytesIO
 import time
 from generator import ImageGenerator
+import threading
+from queue import Queue
+import concurrent.futures
 
 app = Flask(__name__)
+request_queue = Queue()
+thread_lock = threading.Lock()
 
 try:
     generator = ImageGenerator()
 except RuntimeError as e:
     print(f"Failed to initialize ImageGenerator: {e}")
     generator = None
+
+# Create a thread pool executor
+executor = concurrent.futures.ThreadPoolExecutor(max_workers=3)
 
 def make_response(status="ok", data=None, error=None, http_code=200):
     response = {
@@ -21,6 +29,10 @@ def make_response(status="ok", data=None, error=None, http_code=200):
     if error is not None:
         response["error"] = error
     return jsonify(response), http_code
+
+def generate_image_task(prompt, height, width, model):
+    with thread_lock:
+        return generator.generate(prompt, height, width, model)
 
 @app.route('/generate', methods=['POST'])
 def generate_image_endpoint():
@@ -49,7 +61,11 @@ def generate_image_endpoint():
             )
         
         generation_start = time.time()
-        image = generator.generate(prompt, height, width, model)
+        
+        # Submit the task to the thread pool
+        future = executor.submit(generate_image_task, prompt, height, width, model)
+        image = future.result()  # Wait for the result
+        
         generation_time = time.time() - generation_start
         
         img_io = BytesIO()
@@ -134,4 +150,4 @@ def index():
     return make_response(status="ok", data=api_docs)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8484, debug=False, threaded=False)
+    app.run(host='0.0.0.0', port=8484, debug=False, threaded=True)
