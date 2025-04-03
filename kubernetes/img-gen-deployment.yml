@@ -19,33 +19,20 @@ spec:
             - containerPort: 8484
           env:
             - name: PYTORCH_CUDA_ALLOC_CONF
-              value: "expandable_segments:True"
+              value: "max_split_size_mb:512"
           resources:
             limits:
               nvidia.com/gpu: 1
               cpu: "8"
-              memory: "48Gi"
+              memory: "64Gi"  # Increased memory limit
             requests:
               nvidia.com/gpu: 1
               cpu: "4"
-              memory: "32Gi"
+              memory: "48Gi"  # Increased memory request
       tolerations:
         - key: nvidia.com/gpu
           operator: Exists
           effect: NoSchedule
-        - key: node.kubernetes.io/memory-pressure
-          operator: Exists
-          effect: NoSchedule
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              preference:
-                matchExpressions:
-                  - key: nvidia.com/gpu
-                    operator: NotIn
-                    values:
-                      - "1"
 ---
 apiVersion: v1
 kind: Service
@@ -57,4 +44,4 @@ spec:
   ports:
     - port: 8484
       targetPort: 8484
-  type: ClusterIP
+  type: NodePort
