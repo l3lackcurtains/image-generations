@@ -5,9 +5,12 @@ from pathlib import Path
 
 class ImageGenerator:
     def __init__(self, local_model_directory="./local_models"):
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA is not available. This application requires a CUDA-enabled GPU.")
+            
         self.local_model_directory = local_model_directory
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.dtype = torch.bfloat16 if self.device == "cuda" else torch.float32
+        self.device = "cuda"
+        self.dtype = torch.bfloat16
         
         print(f"Initializing ImageGenerator with device: {self.device}")
         self._setup_device()
@@ -15,12 +18,11 @@ class ImageGenerator:
 
     def _setup_device(self):
         """Configure device-specific optimizations"""
-        if self.device == "cuda":
-            torch.backends.cuda.enable_mem_efficient_sdp(True)
-            torch.backends.cuda.matmul.allow_tf32 = True
-            torch.backends.cudnn.allow_tf32 = True
-            torch.cuda.empty_cache()
-            gc.collect()
+        torch.backends.cuda.enable_mem_efficient_sdp(True)
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        torch.cuda.empty_cache()
+        gc.collect()
 
     def _load_models(self):
         """Load and configure the models"""
