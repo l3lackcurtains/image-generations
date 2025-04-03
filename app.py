@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify, send_file
 from io import BytesIO
-from generator import generate_image
-import os
 import time
+from generator import ImageGenerator  # This import should now work
 
 app = Flask(__name__)
+generator = ImageGenerator()
 
 @app.route('/generate', methods=['POST'])
 def generate_image_endpoint():
@@ -26,17 +26,15 @@ def generate_image_endpoint():
         prompt = data.get('prompt')
         height = data.get('height', 1024)
         width = data.get('width', 1024)
-        model = data.get('model', 'flux')
+        model = data.get('model', 'flux-schnell')
         
         if not prompt:
             return jsonify({"error": "'prompt' is required."}), 400
         
-        # Generate image
         generation_start = time.time()
-        image = generate_image(prompt, height, width, model)
+        image = generator.generate(prompt, height, width, model)
         generation_time = time.time() - generation_start
         
-        # Convert image to bytes for response
         img_io = BytesIO()
         image.save(img_io, 'PNG')
         img_io.seek(0)
@@ -69,22 +67,9 @@ def health():
 def system_info():
     """Endpoint to check system configuration including GPU status"""
     try:
-        gpu_info = {}
-        
-        # Try to get PyTorch GPU info
-        try:
-            import torch
-            gpu_info["cuda_available"] = torch.cuda.is_available()
-            if torch.cuda.is_available():
-                gpu_info["cuda_device_count"] = torch.cuda.device_count()
-                gpu_info["cuda_device_name"] = torch.cuda.get_device_name(0)
-                gpu_info["cuda_version"] = torch.version.cuda
-        except ImportError:
-            gpu_info["torch_import_error"] = "PyTorch not installed"
-        
         return jsonify({
             "status": "ok",
-            "gpu_info": gpu_info,
+            "system_info": generator.get_system_info(),
             "timestamp": time.time()
         })
     except Exception as e:

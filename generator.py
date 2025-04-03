@@ -1,94 +1,108 @@
 import torch
 from diffusers import FluxPipeline
-import os
-import uuid
-from pathlib import Path
 import gc
+from pathlib import Path
 
-# Device selection and optimization
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Using device: {device}")
+class ImageGenerator:
+    def __init__(self, local_model_directory="./local_models"):
+        self.local_model_directory = local_model_directory
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.dtype = torch.bfloat16 if self.device == "cuda" else torch.float32
+        
+        print(f"Initializing ImageGenerator with device: {self.device}")
+        self._setup_device()
+        self._load_models()
 
-# CUDA optimizations if available
-if device == "cuda":
-    torch.backends.cuda.enable_mem_efficient_sdp(True)
-    torch.backends.cuda.matmul.allow_tf32 = True
-    torch.backends.cudnn.allow_tf32 = True
-    torch.cuda.empty_cache()
-    gc.collect()
-
-# Set dtypes based on device
-dtype = torch.bfloat16 if device == "cuda" else torch.float32
-
-local_model_directory = "./local_models"
-
-# Load models
-pipe_schnell = FluxPipeline.from_pretrained(
-    pretrained_model_name_or_path=f"{local_model_directory}/black-forest-labs/FLUX.1-schnell", 
-    torch_dtype=dtype,
-    
-)
-
-pipe_dev = FluxPipeline.from_pretrained(
-    pretrained_model_name_or_path=f"{local_model_directory}/black-forest-labs/FLUX.1-dev", 
-    torch_dtype=dtype,
-)
-
-# Configure device placement
-if device == "cuda":
-    pipe_schnell.enable_model_cpu_offload()
-    pipe_dev.enable_model_cpu_offload()
-
-def generate_image(prompt, height=1024, width=1024, model="flux-schnell"):
-    """
-    Generate an image using the specified model
-    
-    Args:
-        prompt (str): Text prompt for image generation
-        height (int): Height of the generated image
-        width (int): Width of the generated image
-        model (str): Model to use ('flux-schnell' or 'flux-dev')
-    
-    Returns:
-        PIL.Image: Generated image
-    """
-    # Generate a random seed for each call to ensure different results
-    random_seed = torch.randint(0, 2**32 - 1, (1,)).item()
-    generator = torch.Generator(device="cuda" if device == "cuda" else None).manual_seed(random_seed)
-    
-    # Print seed for reproducibility if needed later
-    print(f"Using seed: {random_seed}")
-    
-    try:
-        if model == "flux-schnell":
-            image = pipe_schnell(
-                prompt,
-                height=height, 
-                width=width,
-                guidance_scale=0.0,
-                num_inference_steps=4,
-                max_sequence_length=512,
-                generator=generator
-            ).images[0]
-            
-        elif model == "flux-dev":
-            image = pipe_dev(
-                prompt,
-                height=height, 
-                width=width,
-                guidance_scale=3.5,
-                num_inference_steps=20,
-                max_sequence_length=512,
-                generator=generator
-            ).images[0]
-            
-        else:
-            raise ValueError(f"Unsupported model: {model}")
-            
-    finally:
-        # Always clean up CUDA memory after generation
-        if device == "cuda":
+    def _setup_device(self):
+        """Configure device-specific optimizations"""
+        if self.device == "cuda":
+            torch.backends.cuda.enable_mem_efficient_sdp(True)
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
             torch.cuda.empty_cache()
-            
-    return image
+            gc.collect()
 
+    def _load_models(self):
+        """Load and configure the models"""
+        self.pipe_schnell = FluxPipeline.from_pretrained(
+            pretrained_model_name_or_path=f"{self.local_model_directory}/black-forest-labs/FLUX.1-schnell",
+            torch_dtype=self.dtype,
+        )
+        
+        self.pipe_dev = FluxPipeline.from_pretrained(
+            pretrained_model_name_or_path=f"{self.local_model_directory}/black-forest-labs/FLUX.1-dev",
+            torch_dtype=self.dtype,
+        )
+
+        if self.device == "cuda":
+            self.pipe_schnell.enable_model_cpu_offload()
+            self.pipe_dev.enable_model_cpu_offload()
+
+    def generate(self, prompt, height=1024, width=1024, model="flux-schnell"):
+        """
+        Generate an image using the specified model
+        
+        Args:
+            prompt (str): Text prompt for image generation
+            height (int): Height of the generated image
+            width (int): Width of the generated image
+            model (str): Model to use ('flux-schnell' or 'flux-dev')
+        
+        Returns:
+            PIL.Image: Generated image
+        """
+        random_seed = torch.randint(0, 2**32 - 1, (1,)).item()
+        generator = torch.Generator(device="cuda" if self.device == "cuda" else None).manual_seed(random_seed)
+        
+        print(f"Using seed: {random_seed}")
+        
+        try:
+            if model == "flux-schnell":
+                image = self.pipe_schnell(
+                    prompt,
+                    height=height,
+                    width=width,
+                    guidance_scale=0.0,
+                    num_inference_steps=4,
+                    max_sequence_length=512,
+                    generator=generator
+                ).images[0]
+                
+            elif model == "flux-dev":
+                image = self.pipe_dev(
+                    prompt,
+                    height=height,
+                    width=width,
+                    guidance_scale=3.5,
+                    num_inference_steps=20,
+                    max_sequence_length=512,
+                    generator=generator
+                ).images[0]
+                
+            else:
+                raise ValueError(f"Unsupported model: {model}")
+                
+        finally:
+            if self.device == "cuda":
+                torch.cuda.empty_cache()
+                
+        return image
+
+    def get_system_info(self):
+        """Return system information including GPU status"""
+        info = {
+            "device": self.device,
+            "cuda_available": torch.cuda.is_available()
+        }
+        
+        if self.device == "cuda":
+            info.update({
+                "cuda_device_count": torch.cuda.device_count(),
+                "cuda_device_name": torch.cuda.get_device_name(0),
+                "cuda_version": torch.version.cuda
+            })
+            
+        return info
+
+# Make the class available for import
+__all__ = ['ImageGenerator']
