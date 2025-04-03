@@ -15,6 +15,7 @@ class ImageGenerator:
         print(f"Initializing ImageGenerator with device: {self.device}")
         self._setup_device()
         self._load_models()
+        self._configure_models()
 
     def _setup_device(self):
         """Configure device-specific optimizations"""
@@ -39,6 +40,19 @@ class ImageGenerator:
         if self.device == "cuda":
             self.pipe_schnell.enable_model_cpu_offload()
             self.pipe_dev.enable_model_cpu_offload()
+
+    def _configure_models(self):
+        """Configure models for optimized performance without compilation"""
+        import torch
+        
+        if torch.__version__ >= "2.0.0":
+            print("Using PyTorch 2.0+ optimizations without compilation")
+            # Enable additional optimizations available in PyTorch 2.0+
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+            torch.backends.cuda.enable_flash_sdp(True)
+        else:
+            print("Using default PyTorch optimizations")
 
     def generate(self, prompt, height=1024, width=1024, model="flux-schnell"):
         """
